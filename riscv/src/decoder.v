@@ -1,6 +1,5 @@
 `ifndef DECODER
 `define DECODER
-`include "setsize.v"
 
 module Decoder ( //totally combinational
     input wire rst,
