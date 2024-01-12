@@ -1,7 +1,7 @@
 `ifndef DECODER
 `define DECODER
 
-module Decoder ( //totally combinational
+module Decoder (
     input wire rst,
     input wire rdy,
 
