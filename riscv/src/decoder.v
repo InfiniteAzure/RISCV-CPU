@@ -9,69 +9,69 @@ module Decoder (
 
     //issue
     output reg issue,
-    output reg [`ROB_POS_WID] rob_pos,
-    output reg [`OPCODE_WID] opcode,
+    output reg [3:0] rob_pos,
+    output reg [6:0] opcode,
     output reg is_store,
-    output reg [`FUNCT3_WID] funct3,
+    output reg [2:0] funct3,
     output reg funct7,
-    output reg [`DATA_WID] rs1_val,
-    output reg [`ROB_ID_WID] rs1_rob_id,
-    output reg [`DATA_WID] rs2_val,
-    output reg [`ROB_ID_WID] rs2_rob_id,
-    output reg [`DATA_WID] imm,
-    output reg [`REG_POS_WID] rd,
-    output reg [`ADDR_WID] pc,
+    output reg [31:0] rs1_val,
+    output reg [31:0] rs2_val,
+    output reg [4:0] rs1_rob_id,
+    output reg [4:0] rs2_rob_id,
+    output reg [31:0] imm,
+    output reg [4:0] rd,
+    output reg [31:0] pc,
     output reg pred_jump,
     output reg is_ready,
 
-    //from ifetch
+    //ifetch
     input wire inst_rdy,
-    input wire [`INST_WID] inst,
-    input wire [`ADDR_WID] inst_pc,
+    input wire [31:0] inst,
+    input wire [31:0] inst_pc,
     input wire inst_pred_jump,
 
-    //from regfile
-    output wire [`REG_POS_WID] reg_rs1,
-    input  wire [`DATA_WID] reg_rs1_val,
-    input  wire [`ROB_ID_WID] reg_rs1_rob_id,
-    output wire [`REG_POS_WID] reg_rs2,
-    input  wire [`DATA_WID] reg_rs2_val,
-    input  wire [`ROB_ID_WID] reg_rs2_rob_id,
+    //regfile
+    output wire [4:0] reg_rs1,
+    output wire [4:0] reg_rs2,
+    input  wire [31:0] reg_rs1_val,
+    input  wire [31:0] reg_rs2_val,
+    input  wire [4:0] reg_rs1_rob_id,
+    input  wire [4:0] reg_rs2_rob_id,
 
     //from rob
-    output wire [`ROB_POS_WID] rob_rs1_pos,
+    output wire [3:0] rob_rs1_pos,
+    output wire [3:0] rob_rs2_pos,
     input  wire rob_rs1_ready,
-    input  wire [`DATA_WID] rob_rs1_val,
-    output wire [`ROB_POS_WID] rob_rs2_pos,
     input  wire rob_rs2_ready,
-    input  wire [`DATA_WID] rob_rs2_val,
+    input  wire [31:0] rob_rs1_val,
+    input  wire [31:0] rob_rs2_val,
 
     output reg rs_en,
     output reg lsb_en,
 
-    input wire [`ROB_POS_WID] nxt_rob_pos,
+    input wire [3:0] nxt_rob_pos,
 
     //broadcast
     //from rs
     input wire alu_result,
-    input wire [`ROB_POS_WID] alu_result_rob_pos,
-    input wire [`DATA_WID] alu_result_val,
+    input wire [3:0] alu_result_rob_pos,
+    input wire [31:0] alu_result_val,
     //from lsb
     input wire lsb_result,
-    input wire [`ROB_POS_WID] lsb_result_rob_pos,
-    input wire [`DATA_WID] lsb_result_val
+    input wire [3:0] lsb_result_rob_pos,
+    input wire [31:0] lsb_result_val
 );
 
-    assign reg_rs1 = inst[`RS1_RANGE];
-    assign reg_rs2 = inst[`RS2_RANGE];
-    assign rob_rs1_pos = reg_rs1_rob_id[`ROB_POS_WID];
-    assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
+    assign reg_rs1 = inst[19:15];
+    assign reg_rs2 = inst[24:20];
+    assign rob_rs1_pos = reg_rs1_rob_id[3:0];
+    assign rob_rs2_pos = reg_rs2_rob_id[3:0];
 
     always @(*) begin
-        opcode = inst[`OPCODE_RANGE];
-        funct3 = inst[`FUNCT3_RANGE];
+        opcode = inst[6:0];
+        funct3 = inst[14:12];
         funct7 = inst[30];
-        rd = inst[`RD_RANGE];
+        rd = inst[11:7];
         imm = 0;
         pc = inst_pc;
         pred_jump = inst_pred_jump;
@@ -81,8 +81,8 @@ module Decoder (
         rs_en = 0;
         is_ready = 0;
         rs1_val = 0;
-        rs1_rob_id = 0;
         rs2_val = 0;
+        rs1_rob_id = 0;
         rs2_rob_id = 0;
 
         if (!rst && !rollback && rdy && inst_rdy) begin
@@ -109,28 +109,28 @@ module Decoder (
 
             is_store = 0;
             //if set zero, then it is unused.
-            case (inst[`OPCODE_RANGE])
-                `OPCODE_L: begin
+            case (inst[6:0])
+                7'b0000011: begin
                     lsb_en = 1;
                     rs2_rob_id = 0;
                     rs2_val = 0;
                     imm = {{21{inst[31]}}, inst[30:20]};
                 end
-                `OPCODE_S: begin
+                7'b0100011: begin
                     lsb_en = 1;
                     is_ready = 1;//If store,then set ready so that it can be committed directly.
                     rd = 0;
                     imm = {{21{inst[31]}}, inst[30:25], inst[11:7]};
                     is_store = 1;
                 end
-                `OPCODE_CALCU: rs_en = 1;
-                `OPCODE_CALCUI: begin
+                7'b0110011: rs_en = 1;
+                7'b0010011: begin
                     rs_en = 1;
                     rs2_rob_id = 0;
                     rs2_val = 0;
                     imm = {{21{inst[31]}}, inst[30:20]};
                 end
-                `OPCODE_JAL: begin
+                7'b1101111: begin
                     rs_en = 1;
                     rs1_rob_id = 0;
                     rs1_val = 0;
@@ -138,18 +138,18 @@ module Decoder (
                     rs2_val = 0;
                     imm = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
                 end
-                `OPCODE_JALR: begin
+                7'b1100111: begin
                     rs_en = 1;
                     rs2_rob_id = 0;
                     rs2_val = 0;
                     imm = {{21{inst[31]}}, inst[30:20]};
                 end
-                `OPCODE_BR: begin
+                7'b1100011: begin
                     rs_en = 1;
                     rd = 0;
                     imm = {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
                 end
-                `OPCODE_LUI, `OPCODE_AUIPC: begin
+                7'b0110111, 7'b0010111: begin
                     rs_en = 1;
                     rs1_rob_id = 0;
                     rs1_val = 0;
