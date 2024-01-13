@@ -118,6 +118,7 @@ module MemCtrl (
                     end
                 end
                 2'b11: begin //store
+                // add for FPGA
                     if (store_addr[17:16] != 2'b11 || !io_buffer_full) begin
                         mem_wr <= 1;
                         case (cur)

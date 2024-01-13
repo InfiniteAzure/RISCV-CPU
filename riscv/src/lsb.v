@@ -69,6 +69,7 @@ module LSB (
     reg committed [15:0];
 
     wire [31:0] head_addr = rs1_val[head] + imm[head];
+    //for FPGA change
     wire head_is_io = head_addr[17:16] == 2'b11;
     wire OK = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0;
     wire r_ready = !is_store[head] && !rollback && (!head_is_io || rob_pos[head] == head_rob_pos);
